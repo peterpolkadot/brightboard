@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
@@ -86,20 +86,95 @@ export function SlideGenerator({ project, curriculum, initialSlides }: Props) {
 
   async function exportPDF() {
     setExportLoading(true)
-    const res = await fetch(`/api/export/pdf`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId: project.id }),
-    })
-    if (res.ok) {
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${project.title}.pdf`
-      a.click()
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+      const W = 297
+      const H = 210
+      const COLORS = [
+        [254, 243, 199], [224, 242, 254], [237, 233, 254],
+        [209, 250, 229], [254, 226, 226], [255, 247, 237],
+      ]
+
+      slides.forEach((slide, i) => {
+        if (i > 0) doc.addPage()
+        const content = slide.content as unknown as SlideContent
+        const bg = COLORS[i % COLORS.length]
+
+        // Background
+        doc.setFillColor(bg[0], bg[1], bg[2])
+        doc.rect(0, 0, W, H, 'F')
+
+        // Slide number chip
+        doc.setFillColor(247, 144, 9)
+        doc.roundedRect(10, 10, 12, 8, 2, 2, 'F')
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'bold')
+        doc.text(String(i + 1), 16, 15.5, { align: 'center' })
+
+        if (slide.slide_type === 'title') {
+          // Centred title layout
+          doc.setTextColor(28, 25, 23)
+          doc.setFontSize(32)
+          doc.setFont('helvetica', 'bold')
+          const titleLines = doc.splitTextToSize(content?.title ?? slide.title, 220)
+          doc.text(titleLines, W / 2, H / 2 - 10, { align: 'center' })
+          if (content?.body) {
+            doc.setFontSize(14)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(87, 83, 78)
+            doc.text(doc.splitTextToSize(content.body, 200), W / 2, H / 2 + 18, { align: 'center' })
+          }
+        } else {
+          // Heading
+          doc.setTextColor(28, 25, 23)
+          doc.setFontSize(22)
+          doc.setFont('helvetica', 'bold')
+          const titleLines = doc.splitTextToSize(content?.title ?? slide.title, 260)
+          doc.text(titleLines, W / 2, 40, { align: 'center' })
+
+          let y = 40 + titleLines.length * 10
+
+          // Body
+          if (content?.body) {
+            doc.setFontSize(13)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(87, 83, 78)
+            const bodyLines = doc.splitTextToSize(content.body, 240)
+            doc.text(bodyLines, W / 2, y + 8, { align: 'center' })
+            y += bodyLines.length * 7 + 10
+          }
+
+          // Bullets
+          if (content?.bullets?.length) {
+            doc.setFontSize(12)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(28, 25, 23)
+            const startX = W / 2 - 90
+            content.bullets.forEach(bullet => {
+              doc.setFillColor(247, 144, 9)
+              doc.circle(startX - 3, y + 3.5, 1.5, 'F')
+              const lines = doc.splitTextToSize(bullet, 180)
+              doc.text(lines, startX + 2, y + 5)
+              y += lines.length * 6 + 3
+            })
+          }
+        }
+
+        // Footer
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(168, 162, 158)
+        doc.text(project.title, W / 2, H - 6, { align: 'center' })
+      })
+
+      doc.save(`${project.title}.pdf`)
+    } catch (err) {
+      console.error('PDF export failed', err)
+    } finally {
+      setExportLoading(false)
     }
-    setExportLoading(false)
   }
 
   const slideContent = currentSlide?.content as unknown as SlideContent | undefined

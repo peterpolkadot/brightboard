@@ -133,6 +133,30 @@ CREATE TRIGGER resources_updated_at
   BEFORE UPDATE ON resources
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- ─── ADMIN SETTINGS ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS admin_settings (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
+
+-- All authenticated users can read settings (needed by AI generation layer)
+-- Writes are gated by API routes checking isAdminEmail()
+-- Reads: all authenticated (AI generation layer needs this)
+-- Writes: authenticated users only — admin check enforced at API route level
+CREATE POLICY "Authenticated users can read settings" ON admin_settings
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can write settings" ON admin_settings
+  FOR ALL USING (auth.role() = 'authenticated');
+
+-- Seed default settings
+INSERT INTO admin_settings (key, value) VALUES
+  ('active_model', '"anthropic/claude-sonnet-4-5"')
+ON CONFLICT (key) DO NOTHING;
+
 -- ─── USAGE LOGS ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS usage_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

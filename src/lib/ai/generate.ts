@@ -21,9 +21,23 @@ interface OpenRouterResult {
   cost_usd: number | null
 }
 
+async function getActiveModel(): Promise<string> {
+  try {
+    const { createClient } = await import('@/lib/supabase/server')
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('admin_settings')
+      .select('value')
+      .eq('key', 'active_model')
+      .single()
+    if (data?.value && typeof data.value === 'string') return data.value
+  } catch {}
+  return process.env.OPENROUTER_MODEL ?? 'anthropic/claude-sonnet-4-5'
+}
+
 async function callOpenRouter(prompt: string, taskLabel: string): Promise<OpenRouterResult> {
   const apiKey = process.env.OPENROUTER_API_KEY
-  const model = process.env.OPENROUTER_MODEL ?? 'anthropic/claude-sonnet-4-5'
+  const model = await getActiveModel()
 
   if (!apiKey || apiKey === 'your_openrouter_api_key') {
     throw new Error('OPENROUTER_API_KEY not configured.')

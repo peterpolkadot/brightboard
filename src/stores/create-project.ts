@@ -24,11 +24,32 @@ const initialState: CreateProjectState = {
 export const useCreateProjectStore = create<CreateProjectStore>((set) => ({
   ...initialState,
 
-  setStep: (step) => set({ step }),
-  setYearLevel: (yearLevel) => set({ yearLevel, step: 2 }),
-  setSubject: (subject) => set({ subject, step: 3 }),
-  setCurriculum: (code, outcome) => set({ curriculumCode: code, curriculumOutcome: outcome, step: 4 }),
-  setResourceType: (resourceType) => set({ resourceType, step: 5 }),
+  setStep: (step) => set({ step: Math.max(1, Math.min(5, step)) }),
+  setYearLevel: (yearLevel) => set({
+    yearLevel,
+    subject: undefined,
+    curriculumCode: undefined,
+    curriculumOutcome: undefined,
+    resourceType: undefined,
+    visualStyle: undefined,
+    step: 2,
+  }),
+  setSubject: (subject) => set({
+    subject,
+    curriculumCode: undefined,
+    curriculumOutcome: undefined,
+    resourceType: undefined,
+    visualStyle: undefined,
+    step: 3,
+  }),
+  setCurriculum: (code, outcome) => set({
+    curriculumCode: code,
+    curriculumOutcome: outcome,
+    resourceType: undefined,
+    visualStyle: undefined,
+    step: 4,
+  }),
+  setResourceType: (resourceType) => set({ resourceType, visualStyle: undefined, step: 5 }),
   setVisualStyle: (visualStyle) => set({ visualStyle }),
   reset: () => set(initialState),
 }))

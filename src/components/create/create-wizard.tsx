@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCreateProjectStore } from '@/stores/create-project'
 import { StepIndicator } from './step-indicator'
@@ -21,17 +22,24 @@ const STEPS = [
 export function CreateWizard() {
   const { step, yearLevel, subject, curriculumOutcome, resourceType, visualStyle, reset } = useCreateProjectStore()
   const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
 
   async function handleFinish() {
     const supabase = createClient()
     if (!yearLevel || !subject || !curriculumOutcome || !resourceType || !visualStyle) return
+    setError(null)
 
-    const title = `${curriculumOutcome.title} — ${resourceType.replace('_', ' ')}`
+    const { data: authData, error: authError } = await supabase.auth.getUser()
+    if (authError || !authData.user) {
+      setError('Please sign in again before creating a resource.')
+      return
+    }
 
+    const title = `${curriculumOutcome.title} - ${resourceType.replace('_', ' ')}`
     const { data, error } = await supabase
       .from('bb_projects')
       .insert({
-        user_id: (await supabase.auth.getUser()).data.user!.id,
+        user_id: authData.user.id,
         title,
         year_level: yearLevel,
         subject,
@@ -45,6 +53,7 @@ export function CreateWizard() {
 
     if (error || !data) {
       console.error(error)
+      setError(error?.message ?? 'Could not create the project. Please try again.')
       return
     }
 
@@ -62,6 +71,11 @@ export function CreateWizard() {
       <StepIndicator steps={STEPS} currentStep={step} />
 
       <div className="mt-8 bg-white rounded-3xl border border-amber-100 shadow-card p-8">
+        {error && (
+          <div className="mb-6 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 font-medium">
+            {error}
+          </div>
+        )}
         {step === 1 && <StepYearLevel />}
         {step === 2 && <StepSubject />}
         {step === 3 && <StepCurriculum />}

@@ -30,6 +30,7 @@ interface OpenRouterImageResult {
 }
 
 const DEFAULT_IMAGE_MODEL = 'google/gemini-3.1-flash-image-preview'
+const IMAGE_BUCKET = 'slides'
 
 async function getActiveModel(): Promise<string> {
   try {
@@ -152,6 +153,67 @@ async function callOpenRouterImage(prompt: string): Promise<OpenRouterImageResul
     usage,
     model: data.model ?? model,
     cost_usd: data.usage?.cost ?? null,
+  }
+}
+
+function parseDataUrl(dataUrl: string): { mimeType: string; bytes: Buffer; extension: string } | null {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
+  if (!match) return null
+
+  const mimeType = match[1]
+  const extension = mimeType.includes('png')
+    ? 'png'
+    : mimeType.includes('webp')
+    ? 'webp'
+    : mimeType.includes('jpeg') || mimeType.includes('jpg')
+    ? 'jpg'
+    : 'bin'
+
+  return { mimeType, bytes: Buffer.from(match[2], 'base64'), extension }
+}
+
+async function storeImageIfNeeded(
+  imageUrl: string,
+  context?: { projectId?: string; userId?: string }
+): Promise<string | null> {
+  if (!imageUrl.startsWith('data:')) return imageUrl
+
+  const parsed = parseDataUrl(imageUrl)
+  if (!parsed || !context?.projectId || !context.userId) {
+    return imageUrl.length < 250_000 ? imageUrl : null
+  }
+
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const { createClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient() ?? await createClient()
+    const path = `${context.userId}/${context.projectId}/${crypto.randomUUID()}.${parsed.extension}`
+
+    let { error } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, parsed.bytes, {
+        contentType: parsed.mimeType,
+        upsert: true,
+      })
+
+    if (error && /bucket|not found/i.test(error.message)) {
+      await supabase.storage.createBucket(IMAGE_BUCKET, { public: true })
+      const retry = await supabase.storage
+        .from(IMAGE_BUCKET)
+        .upload(path, parsed.bytes, {
+          contentType: parsed.mimeType,
+          upsert: true,
+        })
+      error = retry.error
+    }
+
+    if (error) throw error
+
+    const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path)
+    return data.publicUrl
+  } catch (err) {
+    console.warn('[image_storage] Failed to upload image data URL', err)
+    return imageUrl.length < 250_000 ? imageUrl : null
   }
 }
 
@@ -371,6 +433,7 @@ export async function generateImage(
   try {
     const result = await callOpenRouterImage(prompt)
     if (result?.imageUrl) {
+      const storedImageUrl = await storeImageIfNeeded(result.imageUrl, context)
       logUsage({
         project_id: context?.projectId,
         user_id: context?.userId,
@@ -381,7 +444,7 @@ export async function generateImage(
         total_tokens: result.usage.total_tokens,
         cost_usd: result.cost_usd,
       })
-      return result.imageUrl
+      return storedImageUrl
     }
   } catch (err) {
     if (attemptedModel) {

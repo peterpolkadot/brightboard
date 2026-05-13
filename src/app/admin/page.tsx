@@ -44,6 +44,34 @@ export default async function AdminPage() {
       created_at: authUser.created_at,
       last_sign_in_at: authUser.last_sign_in_at ?? null,
     })) ?? []
+  const usageByUser: Record<string, {
+    calls: number
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
+    cost_usd: number
+    last_call_at: string | null
+  }> = {}
+  for (const log of usageRes.data ?? []) {
+    if (!log.user_id) continue
+    usageByUser[log.user_id] ??= {
+      calls: 0,
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      cost_usd: 0,
+      last_call_at: null,
+    }
+    usageByUser[log.user_id].calls += 1
+    usageByUser[log.user_id].prompt_tokens += log.prompt_tokens ?? 0
+    usageByUser[log.user_id].completion_tokens += log.completion_tokens ?? 0
+    usageByUser[log.user_id].total_tokens += log.total_tokens ?? 0
+    usageByUser[log.user_id].cost_usd += Number(log.cost_usd ?? 0)
+    const lastCallAt = usageByUser[log.user_id].last_call_at
+    if (!lastCallAt || log.created_at > lastCallAt) {
+      usageByUser[log.user_id].last_call_at = log.created_at
+    }
+  }
 
   return (
     <div className="min-h-screen bg-amber-50">
@@ -61,6 +89,7 @@ export default async function AdminPage() {
           profiles={profilesRes.data ?? []}
           authUsers={brightboardAuthUsers}
           projects={projectsRes.data ?? []}
+          usageByUser={usageByUser}
           usageLogs={usageRes.data ?? []}
           settings={settings}
         />

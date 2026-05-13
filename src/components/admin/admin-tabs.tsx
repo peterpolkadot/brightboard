@@ -30,6 +30,14 @@ interface Props {
     status: string
     created_at: string
   }[]
+  usageByUser: Record<string, {
+    calls: number
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
+    cost_usd: number
+    last_call_at: string | null
+  }>
   usageLogs: {
     id: string
     task: string
@@ -49,7 +57,7 @@ const TABS = [
   { id: 'settings', label: '⚙️ Settings' },
 ]
 
-export function AdminTabs({ profiles, authUsers, projects, usageLogs, settings }: Props) {
+export function AdminTabs({ profiles, authUsers, projects, usageByUser, usageLogs, settings }: Props) {
   const [tab, setTab] = useState('usage')
 
   return (
@@ -72,7 +80,7 @@ export function AdminTabs({ profiles, authUsers, projects, usageLogs, settings }
       </div>
 
       {tab === 'usage'    && <UsageTab usageLogs={usageLogs} />}
-      {tab === 'users'    && <UsersTab profiles={profiles} authUsers={authUsers} projects={projects} />}
+      {tab === 'users'    && <UsersTab profiles={profiles} authUsers={authUsers} projects={projects} usageByUser={usageByUser} />}
       {tab === 'settings' && <SettingsTab settings={settings} />}
     </div>
   )

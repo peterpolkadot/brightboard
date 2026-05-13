@@ -122,7 +122,7 @@ export default async function HomePage() {
       <section className="py-24 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-black text-stone-900 mb-4">Everything you need, nothing you don't</h2>
+            <h2 className="text-4xl font-black text-stone-900 mb-4">Everything you need, nothing you don&apos;t</h2>
             <p className="text-lg text-stone-500 font-medium">Three resource types. Infinite classroom possibilities.</p>
           </div>
 

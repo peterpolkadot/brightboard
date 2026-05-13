@@ -16,6 +16,14 @@ export async function POST(req: NextRequest) {
 
     const { projectId, curriculum }: { projectId: string; curriculum: CurriculumOutcome } = await req.json()
 
+    const { data: project } = await supabase
+      .from('bb_projects')
+      .select('id')
+      .eq('id', projectId)
+      .eq('user_id', user.id)
+      .single()
+    if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
     const lessonPlan = await generateLessonPlan(curriculum, { projectId, userId: user.id })
 
     const { data: existing } = await supabase

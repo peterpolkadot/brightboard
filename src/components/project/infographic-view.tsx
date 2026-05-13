@@ -26,6 +26,7 @@ export function InfographicView({ project, curriculum, resource }: Props) {
   )
   const [imageUrl, setImageUrl] = useState<string | null>(resource?.image_url ?? null)
   const [loading, setLoading] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function generateInfographic() {
@@ -48,6 +49,63 @@ export function InfographicView({ project, curriculum, resource }: Props) {
     }
   }
 
+  async function exportPDF() {
+    if (!infographic) return
+    setExportLoading(true)
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const margin = 16
+      const width = 210 - margin * 2
+      let y = 24
+
+      doc.setFillColor(240, 253, 250)
+      doc.rect(0, 0, 210, 297, 'F')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(22)
+      doc.setTextColor(28, 25, 23)
+      doc.text(doc.splitTextToSize(infographic.title, width), 105, y, { align: 'center' })
+      y += 18
+
+      if (infographic.subtitle) {
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(11)
+        doc.setTextColor(87, 83, 78)
+        doc.text(doc.splitTextToSize(infographic.subtitle, width), 105, y, { align: 'center' })
+        y += 14
+      }
+
+      infographic.sections.forEach((section, index) => {
+        if (y > 255) {
+          doc.addPage()
+          doc.setFillColor(240, 253, 250)
+          doc.rect(0, 0, 210, 297, 'F')
+          y = 24
+        }
+        doc.setFillColor(index % 2 === 0 ? 254 : 224, index % 2 === 0 ? 243 : 242, index % 2 === 0 ? 199 : 254)
+        doc.roundedRect(margin, y, width, 27, 4, 4, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(13)
+        doc.setTextColor(28, 25, 23)
+        doc.text(`${index + 1}. ${section.label}`, margin + 6, y + 9)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        doc.setTextColor(87, 83, 78)
+        doc.text(doc.splitTextToSize(section.content, width - 12), margin + 6, y + 18)
+        y += 34
+      })
+
+      doc.setFontSize(8)
+      doc.setTextColor(120, 113, 108)
+      doc.text(`Foundation · ${project.curriculum_code} · Brightboard`, 105, 287, { align: 'center' })
+      doc.save(`${project.title}.pdf`)
+    } catch (err) {
+      console.error('Infographic PDF export failed', err)
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
   return (
     <div className="bg-white rounded-3xl border border-amber-100 shadow-card">
       <div className="p-8 border-b border-amber-100 flex items-center justify-between">
@@ -60,7 +118,9 @@ export function InfographicView({ project, curriculum, resource }: Props) {
             {loading ? <><Spinner size="sm" /> Generating…</> : infographic ? '↺ Regenerate' : '✨ Generate infographic'}
           </Button>
           {infographic && (
-            <Button variant="sky" disabled title="Export coming soon">📄 Export PDF</Button>
+            <Button variant="sky" onClick={exportPDF} disabled={exportLoading}>
+              {exportLoading ? <Spinner size="sm" /> : '📄'} Export PDF
+            </Button>
           )}
         </div>
       </div>

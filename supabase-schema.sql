@@ -103,7 +103,7 @@ ALTER TABLE bb_slides ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can CRUD own slides" ON bb_slides
   FOR ALL USING (
-    auth.uid() = (SELECT user_id FROM bb_projects WHERE id = slides.project_id)
+    auth.uid() = (SELECT user_id FROM bb_projects WHERE id = bb_slides.project_id)
   );
 
 CREATE TRIGGER bb_slides_updated_at
@@ -126,7 +126,7 @@ ALTER TABLE bb_resources ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can CRUD own resources" ON bb_resources
   FOR ALL USING (
-    auth.uid() = (SELECT user_id FROM bb_projects WHERE id = resources.project_id)
+    auth.uid() = (SELECT user_id FROM bb_projects WHERE id = bb_resources.project_id)
   );
 
 CREATE TRIGGER bb_resources_updated_at
@@ -154,7 +154,8 @@ CREATE POLICY "Authenticated users can write settings" ON bb_admin_settings
 
 -- Seed default settings
 INSERT INTO bb_admin_settings (key, value) VALUES
-  ('active_model', '"anthropic/claude-sonnet-4-5"')
+  ('active_model', '"anthropic/claude-sonnet-4-5"'),
+  ('active_image_model', '"google/gemini-3.1-flash-image-preview"')
 ON CONFLICT (key) DO NOTHING;
 
 -- ─── USAGE LOGS ──────────────────────────────────────────────────────────────

@@ -6,26 +6,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Nav } from '@/components/nav'
 import { isAdminEmail } from '@/lib/admin/auth'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { formatDate } from '@/lib/utils'
-
-const RESOURCE_LABELS: Record<string, string> = {
-  slide_deck: 'Slide Deck',
-  infographic: 'Infographic',
-  lesson_plan: 'Lesson Plan',
-}
-
-const RESOURCE_ICONS: Record<string, string> = {
-  slide_deck: '🎨',
-  infographic: '🖼️',
-  lesson_plan: '📋',
-}
-
-const STATUS_VARIANT: Record<string, 'default' | 'success' | 'warning' | 'info'> = {
-  draft: 'warning',
-  generating: 'info',
-  complete: 'success',
-}
+import { getSubjectOptions } from '@/data/curriculum'
+import { FolderManager } from '@/components/dashboard/folder-manager'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -33,21 +15,28 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/login')
 
-  const { data: projects } = await supabase
-    .from('bb_projects')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('updated_at', { ascending: false })
+  const [{ data: projects }, { data: folders }] = await Promise.all([
+    supabase
+      .from('bb_projects')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false }),
+    supabase
+      .from('bb_folders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true }),
+  ])
 
   const firstName = user.user_metadata?.full_name?.split(' ')[0] ?? 'Teacher'
   const admin = isAdminEmail(user.email)
+  const subjectCoverage = getSubjectOptions().slice(0, 8)
 
   return (
     <div className="min-h-screen bg-amber-50">
       <Nav user={user} isAdmin={admin} />
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
           <div>
             <h1 className="text-3xl font-black text-stone-900">
@@ -60,7 +49,6 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
           {[
             { label: 'Total projects', value: projects?.length ?? 0, icon: '📁', color: 'bg-amber-50 border-amber-200' },
@@ -76,50 +64,26 @@ export default async function DashboardPage() {
           ))}
         </div>
 
-        {/* Projects grid */}
         {!projects || projects.length === 0 ? (
           <EmptyState />
         ) : (
-          <div>
-            <h2 className="text-xl font-black text-stone-800 mb-5">Recent projects</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map(project => (
-                <Link key={project.id} href={`/project/${project.id}`}>
-                  <div className="group bg-white rounded-3xl border border-amber-100 shadow-card hover:shadow-card-hover transition-all duration-200 hover:-translate-y-1 overflow-hidden cursor-pointer">
-                    {/* Thumbnail */}
-                    <div className="aspect-video bg-gradient-to-br from-amber-50 via-yellow-50 to-sky-50 flex items-center justify-center relative">
-                      {project.thumbnail_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={project.thumbnail_url} alt={project.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-5xl">{RESOURCE_ICONS[project.resource_type] ?? '📄'}</span>
-                      )}
-                      <div className="absolute top-3 right-3">
-                        <Badge variant={STATUS_VARIANT[project.status] ?? 'secondary'}>
-                          {project.status}
-                        </Badge>
-                      </div>
-                    </div>
+          <div className="space-y-8">
+            <FolderManager initialFolders={folders ?? []} initialProjects={projects} />
 
-                    {/* Info */}
-                    <div className="p-5">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="font-black text-stone-900 text-sm leading-tight line-clamp-2">
-                          {project.title}
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="secondary">{RESOURCE_LABELS[project.resource_type]}</Badge>
-                        <Badge variant="secondary">{project.subject}</Badge>
-                      </div>
-                      <p className="text-xs text-stone-400 font-medium mt-3">
-                        Updated {formatDate(project.updated_at)}
-                      </p>
-                    </div>
+            <aside className="bg-white rounded-3xl border border-amber-100 shadow-card p-5">
+              <h2 className="font-black text-stone-900 mb-1">Curriculum coverage</h2>
+              <p className="text-xs font-semibold text-stone-400 mb-4">
+                {subjectCoverage.reduce((sum, subject) => sum + subject.count, 0)} outcomes across featured Foundation subjects.
+              </p>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                {subjectCoverage.map(subject => (
+                  <div key={subject.id} className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50 border border-amber-100 px-3 py-2">
+                    <span className="text-sm font-bold text-stone-700 truncate">{subject.label}</span>
+                    <span className="text-xs font-black text-amber-700">{subject.count}</span>
                   </div>
-                </Link>
-              ))}
-            </div>
+                ))}
+              </div>
+            </aside>
           </div>
         )}
       </main>

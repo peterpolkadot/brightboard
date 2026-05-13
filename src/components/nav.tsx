@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 
+const BUILT_IN_ADMINS = ['peterpolkadot@gmail.com']
+
 interface NavProps {
   user?: { email?: string } | null
   isAdmin?: boolean
@@ -12,6 +14,7 @@ interface NavProps {
 
 export function Nav({ user, isAdmin }: NavProps) {
   const router = useRouter()
+  const showAdmin = isAdmin ?? BUILT_IN_ADMINS.includes(user?.email?.toLowerCase() ?? '')
 
   async function handleLogout() {
     const supabase = createClient()
@@ -37,7 +40,7 @@ export function Nav({ user, isAdmin }: NavProps) {
                 <Link href="/dashboard">
                   <Button variant="ghost" size="sm">Dashboard</Button>
                 </Link>
-                {isAdmin && (
+                {showAdmin && (
                   <Link href="/admin">
                     <Button variant="ghost" size="sm">🔒 Admin</Button>
                   </Link>

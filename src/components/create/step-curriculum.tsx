@@ -16,7 +16,7 @@ const STRAND_COLORS: Record<string, string> = {
 
 export function StepCurriculum() {
   const { subject, setCurriculum, setStep } = useCreateProjectStore()
-  const outcomes = getCurriculumBySubject(subject ?? 'science')
+  const outcomes = getCurriculumBySubject(subject ?? 'Science')
 
   const strands = [...new Set(outcomes.map(o => o.strand))]
 
@@ -25,6 +25,7 @@ export function StepCurriculum() {
       <h2 className="text-2xl font-black text-stone-900 mb-2">Select curriculum outcome</h2>
       <p className="text-stone-500 font-medium mb-8">
         Choose the specific Australian Curriculum outcome your resource will target.
+        {subject ? ` Showing ${outcomes.length} Foundation outcomes for ${subject}.` : ''}
       </p>
 
       <div className="space-y-6">

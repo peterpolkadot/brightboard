@@ -26,6 +26,7 @@ export function SlidePlanReview({ project, curriculum, onPlanApproved }: Props) 
   const [plan, setPlan] = useState<SlidePlanItem[] | null>(null)
   const [createdSlides, setCreatedSlides] = useState<CreatedSlide[]>([])
   const [loading, setLoading] = useState(false)
+  const [approving, setApproving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function generatePlan() {
@@ -72,6 +73,28 @@ export function SlidePlanReview({ project, curriculum, onPlanApproved }: Props) 
   function removeSlide(index: number) {
     if (!plan) return
     setPlan(plan.filter((_, i) => i !== index).map((p, i) => ({ ...p, position: i + 1 })))
+  }
+
+  async function approvePlan() {
+    if (!plan) return
+    setApproving(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/generate/plan', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id, plan }),
+      })
+
+      if (!res.ok) throw new Error('Failed to save approved plan')
+      const data = await res.json()
+      onPlanApproved(data.slides ?? createdSlides)
+    } catch {
+      setError('Could not save your approved slide plan. Please try again.')
+    } finally {
+      setApproving(false)
+    }
   }
 
   const SLIDE_TYPE_ICONS: Record<string, string> = {
@@ -147,8 +170,8 @@ export function SlidePlanReview({ project, curriculum, onPlanApproved }: Props) 
             <p className="text-sm text-stone-500 font-medium">
               {plan.length} slides · Reorder or remove slides before approving
             </p>
-            <Button size="lg" onClick={() => onPlanApproved(createdSlides)}>
-              Approve plan → Generate slides
+            <Button size="lg" onClick={approvePlan} disabled={approving}>
+              {approving ? <><Spinner size="sm" /> Saving…</> : 'Approve plan → Generate slides'}
             </Button>
           </div>
         </>

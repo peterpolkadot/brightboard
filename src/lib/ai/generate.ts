@@ -21,6 +21,16 @@ interface OpenRouterResult {
   cost_usd: number | null
 }
 
+interface OpenRouterImageResult {
+  imageUrl: string | null
+  text: string
+  usage: OpenRouterUsage
+  model: string
+  cost_usd: number | null
+}
+
+const DEFAULT_IMAGE_MODEL = 'google/gemini-3.1-flash-image-preview'
+
 async function getActiveModel(): Promise<string> {
   try {
     const { createClient } = await import('@/lib/supabase/server')
@@ -35,7 +45,21 @@ async function getActiveModel(): Promise<string> {
   return process.env.OPENROUTER_MODEL ?? 'anthropic/claude-sonnet-4-5'
 }
 
-async function callOpenRouter(prompt: string, taskLabel: string): Promise<OpenRouterResult> {
+async function getActiveImageModel(): Promise<string | null> {
+  try {
+    const { createClient } = await import('@/lib/supabase/server')
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('bb_admin_settings')
+      .select('value')
+      .eq('key', 'active_image_model')
+      .single()
+    if (data?.value && typeof data.value === 'string') return data.value
+  } catch {}
+  return process.env.OPENROUTER_IMAGE_MODEL ?? DEFAULT_IMAGE_MODEL
+}
+
+async function callOpenRouter(prompt: string): Promise<OpenRouterResult> {
   const apiKey = process.env.OPENROUTER_API_KEY
   const model = await getActiveModel()
 
@@ -73,6 +97,62 @@ async function callOpenRouter(prompt: string, taskLabel: string): Promise<OpenRo
   const cost_usd: number | null = data.usage?.cost ?? null
 
   return { text, usage, model: data.model ?? model, cost_usd }
+}
+
+async function callOpenRouterImage(prompt: string): Promise<OpenRouterImageResult | null> {
+  const apiKey = process.env.OPENROUTER_API_KEY
+  const model = await getActiveImageModel()
+
+  if (!model || !apiKey || apiKey === 'your_openrouter_api_key') return null
+
+  async function requestImage(modalities: string[]) {
+    return fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+      'X-Title': 'Brightboard',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+        modalities,
+      image_config: {
+        aspect_ratio: '16:9',
+        image_size: '1K',
+      },
+      stream: false,
+    }),
+  })
+  }
+
+  let response = await requestImage(['image', 'text'])
+  if (!response.ok) {
+    response = await requestImage(['image'])
+  }
+
+  if (!response.ok) {
+    const err = await response.text()
+    throw new Error(`OpenRouter image API error (${response.status}): ${err}`)
+  }
+
+  const data = await response.json()
+  const message = data.choices?.[0]?.message
+  const firstImage = message?.images?.[0]
+  const imageUrl: string | null =
+    firstImage?.image_url?.url ??
+    firstImage?.imageUrl?.url ??
+    null
+  const usage: OpenRouterUsage = data.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+
+  return {
+    imageUrl,
+    text: message?.content ?? '',
+    usage,
+    model: data.model ?? model,
+    cost_usd: data.usage?.cost ?? null,
+  }
 }
 
 // ─── Usage logging ────────────────────────────────────────────────────────────
@@ -188,7 +268,7 @@ async function getAIText(
   const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey || apiKey === 'your_openrouter_api_key') return ''
 
-  const result = await callOpenRouter(prompt, task)
+  const result = await callOpenRouter(prompt)
 
   // Fire-and-forget usage log
   logUsage({
@@ -262,7 +342,88 @@ export async function generateInfographic(
   }
 }
 
-export async function generateImage(_prompt: string): Promise<string | null> {
-  // Image generation placeholder — wire up DALL-E or Replicate here
-  return null
+function pickVisual(prompt: string): { icon: string; accent: string; label: string } {
+  const text = prompt.toLowerCase()
+  const options: Array<[RegExp, string, string, string]> = [
+    [/butterfly|caterpillar|chrysalis|egg/, '🦋', '#14B8A6', 'Lifecycle'],
+    [/plant|leaf|tree|living|habitat/, '🌿', '#22C55E', 'Living things'],
+    [/weather|season|sky|sun|moon/, '☀️', '#0EA5E9', 'Sky and seasons'],
+    [/force|push|pull|move/, '🧲', '#F97316', 'Push and pull'],
+    [/sound|letter|phonics|word|text|story|book/, '📚', '#8B5CF6', 'Language'],
+    [/number|count|shape|pattern|math/, '🔢', '#F59E0B', 'Mathematics'],
+    [/health|move|body|safe|emotion/, '🏃', '#EC4899', 'Health'],
+    [/place|family|history|community|country/, '🗺️', '#06B6D4', 'Community'],
+  ]
+  const match = options.find(([pattern]) => pattern.test(text))
+  if (match) return { icon: match[1], accent: match[2], label: match[3] }
+  return { icon: '✨', accent: '#F59E0B', label: 'Brightboard' }
+}
+
+function svgDataUrl(svg: string): string {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+export async function generateImage(
+  prompt: string,
+  context?: { projectId?: string; userId?: string }
+): Promise<string | null> {
+  const attemptedModel = await getActiveImageModel()
+  try {
+    const result = await callOpenRouterImage(prompt)
+    if (result?.imageUrl) {
+      logUsage({
+        project_id: context?.projectId,
+        user_id: context?.userId,
+        task: 'image_generation',
+        model: result.model,
+        prompt_tokens: result.usage.prompt_tokens,
+        completion_tokens: result.usage.completion_tokens,
+        total_tokens: result.usage.total_tokens,
+        cost_usd: result.cost_usd,
+      })
+      return result.imageUrl
+    }
+  } catch (err) {
+    if (attemptedModel) {
+      logUsage({
+        project_id: context?.projectId,
+        user_id: context?.userId,
+        task: 'image_generation_failed',
+        model: attemptedModel,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        cost_usd: null,
+      })
+    }
+    console.warn('[image_generation] Falling back to local SVG image', err)
+  }
+
+  const visual = pickVisual(prompt)
+  const safePrompt = prompt.replace(/[<&>]/g, '').slice(0, 120)
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="52%" stop-color="#E0F2FE"/>
+      <stop offset="100%" stop-color="#CCFBF1"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#92400E" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="800" rx="48" fill="url(#bg)"/>
+  <circle cx="180" cy="150" r="86" fill="#FFFFFF" opacity=".72"/>
+  <circle cx="1020" cy="635" r="120" fill="#FFFFFF" opacity=".64"/>
+  <path d="M120 610 C240 540 340 690 480 610 S760 520 900 620 1060 690 1120 610" fill="none" stroke="${visual.accent}" stroke-width="22" stroke-linecap="round" opacity=".22"/>
+  <g filter="url(#shadow)">
+    <rect x="270" y="140" width="660" height="470" rx="44" fill="#FFFFFF"/>
+    <rect x="310" y="180" width="580" height="390" rx="34" fill="#FFF7ED" stroke="${visual.accent}" stroke-width="8" stroke-opacity=".35"/>
+    <text x="600" y="385" text-anchor="middle" dominant-baseline="middle" font-size="180">${visual.icon}</text>
+    <text x="600" y="515" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="800" fill="#1C1917">${visual.label}</text>
+  </g>
+  <text x="600" y="705" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#78716C">${safePrompt}</text>
+</svg>`
+  return svgDataUrl(svg)
 }

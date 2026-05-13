@@ -19,6 +19,8 @@ const TASK_LABELS: Record<string, string> = {
   slide_content: 'Slide Content',
   lesson_plan: 'Lesson Plan',
   infographic: 'Infographic',
+  image_generation: 'Image Generation',
+  image_generation_failed: 'Image Failed',
 }
 
 function summarise(logs: UsageLog[]) {

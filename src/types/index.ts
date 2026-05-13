@@ -1,6 +1,6 @@
 export type YearLevel = 'foundation'
 
-export type Subject = 'science' | 'english'
+export type Subject = string
 
 export type ResourceType = 'slide_deck' | 'infographic' | 'lesson_plan'
 
@@ -12,12 +12,15 @@ export interface CurriculumOutcome {
   strand: string
   subStrand: string
   description: string
+  elaborations?: string[]
   concepts: string[]
   keywords: string[]
   vocabulary: string[]
   learningGoals: string[]
   subject: Subject
+  learningArea?: string
   yearLevel: YearLevel
+  achievementStandard?: string
 }
 
 export interface SlideContent {

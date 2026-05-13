@@ -1,4 +1,4 @@
-import type { CurriculumOutcome, SlidePlanItem } from '@/types'
+import type { CurriculumOutcome } from '@/types'
 
 export function buildSlidePlanPrompt(curriculum: CurriculumOutcome): string {
   return `You are an expert Australian Foundation (ages 5–6) curriculum designer.

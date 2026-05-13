@@ -315,36 +315,94 @@ export function SlideGenerator({ project, curriculum, initialSlides }: Props) {
 }
 
 function SlidePreview({ content, slideType, imageUrl }: { content: SlideContent; slideType: string; imageUrl: string | null }) {
+  const bullets = content.bullets ?? []
+
+  if (slideType === 'title') {
+    return (
+      <div className="w-full h-full grid md:grid-cols-[1fr_0.9fr] items-center gap-8 max-w-4xl mx-auto text-left">
+        <div>
+          <div className="inline-flex items-center rounded-full bg-white/80 border border-amber-200 px-3 py-1 text-xs font-black text-amber-700 mb-4">
+            Brightboard
+          </div>
+          <h1 className="text-3xl sm:text-5xl font-black text-stone-900 mb-4 leading-tight">{content.title}</h1>
+          {content.body && <p className="text-lg text-stone-600 font-bold leading-relaxed">{content.body}</p>}
+        </div>
+        <VisualPanel imageUrl={imageUrl} title={content.title} />
+      </div>
+    )
+  }
+
+  if (slideType === 'activity') {
+    return (
+      <div className="w-full h-full grid md:grid-cols-[0.85fr_1fr] items-center gap-8 max-w-4xl mx-auto">
+        <VisualPanel imageUrl={imageUrl} title={content.title} />
+        <div className="text-left">
+          <span className="inline-flex rounded-full bg-teal-100 text-teal-700 border border-teal-200 px-3 py-1 text-xs font-black mb-4">
+            Class Activity
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black text-stone-900 mb-4 leading-tight">{content.title}</h2>
+          {content.body && <p className="text-lg text-stone-600 font-bold mb-5 leading-relaxed">{content.body}</p>}
+          <BulletList bullets={bullets} />
+        </div>
+      </div>
+    )
+  }
+
+  if (slideType === 'lifecycle' || content.title.toLowerCase().includes('cycle')) {
+    return (
+      <div className="w-full h-full max-w-4xl mx-auto text-center">
+        <h2 className="text-3xl sm:text-4xl font-black text-stone-900 mb-3 leading-tight">{content.title}</h2>
+        {content.body && <p className="text-base text-stone-600 font-bold mb-6">{content.body}</p>}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {(bullets.length ? bullets : ['First', 'Next', 'Then', 'Finally']).slice(0, 4).map((item, index) => (
+            <div key={item} className="bg-white/85 border border-amber-100 rounded-2xl p-4 shadow-sm">
+              <div className="text-3xl mb-2">{['🥚', '🐛', '🌿', '🦋'][index] ?? '✨'}</div>
+              <p className="text-sm font-black text-stone-800">{item}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto">
-      {slideType === 'title' ? (
-        <>
-          <div className="text-5xl mb-4">🌟</div>
-          <h1 className="text-3xl sm:text-4xl font-black text-stone-900 mb-3 leading-tight">{content.title}</h1>
-          {content.body && <p className="text-lg text-stone-600 font-medium">{content.body}</p>}
-        </>
+      <h2 className="text-2xl sm:text-3xl font-black text-stone-900 mb-4 leading-tight">{content.title}</h2>
+      {imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageUrl} alt={content.title} className="max-h-48 object-contain mb-4 rounded-2xl shadow-sm" />
+      )}
+      {content.body && (
+        <p className="text-base text-stone-600 font-medium mb-4 leading-relaxed max-w-lg">{content.body}</p>
+      )}
+      <BulletList bullets={bullets} />
+    </div>
+  )
+}
+
+function VisualPanel({ imageUrl, title }: { imageUrl: string | null; title: string }) {
+  return (
+    <div className="bg-white/80 border border-white rounded-3xl p-4 shadow-card">
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageUrl} alt={title} className="w-full aspect-[4/3] object-contain rounded-2xl" />
       ) : (
-        <>
-          <h2 className="text-2xl sm:text-3xl font-black text-stone-900 mb-4 leading-tight">{content.title}</h2>
-          {imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt={content.title} className="max-h-48 object-contain mb-4 rounded-2xl" />
-          )}
-          {content.body && (
-            <p className="text-base text-stone-600 font-medium mb-4 leading-relaxed max-w-lg">{content.body}</p>
-          )}
-          {content.bullets && content.bullets.length > 0 && (
-            <ul className="text-left space-y-2 max-w-md">
-              {content.bullets.map((b, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm font-semibold text-stone-700">
-                  <span className="text-amber-500 mt-0.5 shrink-0">●</span>
-                  {b}
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
+        <div className="aspect-[4/3] rounded-2xl bg-amber-50 flex items-center justify-center text-6xl">✨</div>
       )}
     </div>
+  )
+}
+
+function BulletList({ bullets }: { bullets: string[] }) {
+  if (bullets.length === 0) return null
+  return (
+    <ul className="text-left space-y-2 max-w-md">
+      {bullets.map((bullet, index) => (
+        <li key={`${bullet}-${index}`} className="flex items-start gap-2 text-sm font-semibold text-stone-700">
+          <span className="text-amber-500 mt-0.5 shrink-0">●</span>
+          {bullet}
+        </li>
+      ))}
+    </ul>
   )
 }

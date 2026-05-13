@@ -14,6 +14,13 @@ interface Props {
     school: string | null
     created_at: string
   }[]
+  authUsers: {
+    id: string
+    email: string
+    full_name: string | null
+    created_at: string
+    last_sign_in_at: string | null
+  }[]
   projects: {
     id: string
     user_id: string
@@ -42,7 +49,7 @@ const TABS = [
   { id: 'settings', label: '⚙️ Settings' },
 ]
 
-export function AdminTabs({ profiles, projects, usageLogs, settings }: Props) {
+export function AdminTabs({ profiles, authUsers, projects, usageLogs, settings }: Props) {
   const [tab, setTab] = useState('usage')
 
   return (
@@ -65,7 +72,7 @@ export function AdminTabs({ profiles, projects, usageLogs, settings }: Props) {
       </div>
 
       {tab === 'usage'    && <UsageTab usageLogs={usageLogs} />}
-      {tab === 'users'    && <UsersTab profiles={profiles} projects={projects} />}
+      {tab === 'users'    && <UsersTab profiles={profiles} authUsers={authUsers} projects={projects} />}
       {tab === 'settings' && <SettingsTab settings={settings} />}
     </div>
   )

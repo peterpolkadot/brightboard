@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdminEmail } from '@/lib/admin/auth'
 import { Nav } from '@/components/nav'
 import { AdminTabs } from '@/components/admin/admin-tabs'
@@ -10,12 +11,18 @@ export default async function AdminPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !isAdminEmail(user.email)) redirect('/dashboard')
+  const serviceSupabase = createAdminClient()
+  const adminSupabase = serviceSupabase ?? supabase
+  const authUsersPromise = serviceSupabase
+    ? serviceSupabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+    : Promise.resolve(null)
 
-  const [profilesRes, projectsRes, usageRes, settingsRes] = await Promise.all([
-    supabase.from('bb_profiles').select('id, email, full_name, school, created_at').order('created_at', { ascending: false }),
-    supabase.from('bb_projects').select('id, user_id, title, resource_type, subject, status, created_at').order('created_at', { ascending: false }),
-    supabase.from('bb_usage_logs').select('*').order('created_at', { ascending: false }),
-    supabase.from('bb_admin_settings').select('*'),
+  const [profilesRes, projectsRes, usageRes, settingsRes, authUsersRes] = await Promise.all([
+    adminSupabase.from('bb_profiles').select('id, email, full_name, school, created_at').order('created_at', { ascending: false }),
+    adminSupabase.from('bb_projects').select('id, user_id, title, resource_type, subject, status, created_at').order('created_at', { ascending: false }),
+    adminSupabase.from('bb_usage_logs').select('*').order('created_at', { ascending: false }),
+    adminSupabase.from('bb_admin_settings').select('*'),
+    authUsersPromise,
   ])
 
   const settings: Record<string, unknown> = {}
@@ -37,6 +44,13 @@ export default async function AdminPage() {
 
         <AdminTabs
           profiles={profilesRes.data ?? []}
+          authUsers={authUsersRes?.data?.users?.map(authUser => ({
+            id: authUser.id,
+            email: authUser.email ?? '',
+            full_name: typeof authUser.user_metadata?.full_name === 'string' ? authUser.user_metadata.full_name : null,
+            created_at: authUser.created_at,
+            last_sign_in_at: authUser.last_sign_in_at ?? null,
+          })) ?? []}
           projects={projectsRes.data ?? []}
           usageLogs={usageRes.data ?? []}
           settings={settings}

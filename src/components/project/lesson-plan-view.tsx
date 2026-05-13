@@ -24,6 +24,7 @@ export function LessonPlanView({ project, curriculum, resource }: Props) {
     resource ? (resource.content as unknown as LessonPlan) : null
   )
   const [loading, setLoading] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function generatePlan() {
@@ -45,6 +46,64 @@ export function LessonPlanView({ project, curriculum, resource }: Props) {
     }
   }
 
+  async function exportPDF() {
+    if (!plan) return
+    setExportLoading(true)
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const margin = 16
+      const width = 210 - margin * 2
+      let y = 18
+
+      const addText = (text: string, size = 10, bold = false) => {
+        doc.setFont('helvetica', bold ? 'bold' : 'normal')
+        doc.setFontSize(size)
+        const lines = doc.splitTextToSize(text, width)
+        if (y + lines.length * 5 > 285) {
+          doc.addPage()
+          y = 18
+        }
+        doc.text(lines, margin, y)
+        y += lines.length * 5 + 3
+      }
+      const addSection = (title: string) => {
+        y += 2
+        doc.setFillColor(254, 243, 199)
+        doc.roundedRect(margin - 2, y - 5, width + 4, 9, 2, 2, 'F')
+        addText(title, 12, true)
+      }
+
+      doc.setFillColor(255, 251, 235)
+      doc.rect(0, 0, 210, 297, 'F')
+      addText(project.title, 18, true)
+      addText(curriculum ? `${curriculum.code} · ${curriculum.subject}` : project.curriculum_code, 10)
+
+      addSection('Learning Intention')
+      addText(plan.learningIntention)
+      addSection('Success Criteria')
+      plan.successCriteria.forEach(item => addText(`• ${item}`))
+      addSection('Materials Needed')
+      addText(plan.materialsNeeded.join(', '))
+      addSection('Classroom Activities')
+      plan.activities.forEach(activity => addText(`${activity.name} (${activity.duration}): ${activity.description}`))
+      addSection('Discussion Prompts')
+      plan.discussionPrompts.forEach(item => addText(`• ${item}`))
+      addSection('Assessment Ideas')
+      plan.assessmentIdeas.forEach(item => addText(`• ${item}`))
+      addSection('Extension Ideas')
+      plan.extensionIdeas.forEach(item => addText(`• ${item}`))
+      addSection('Curriculum Alignment')
+      addText(plan.curriculumAlignment)
+
+      doc.save(`${project.title}.pdf`)
+    } catch (err) {
+      console.error('Lesson plan PDF export failed', err)
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
   return (
     <div className="bg-white rounded-3xl border border-amber-100 shadow-card">
       <div className="p-8 border-b border-amber-100 flex items-center justify-between">
@@ -57,7 +116,9 @@ export function LessonPlanView({ project, curriculum, resource }: Props) {
             {loading ? <><Spinner size="sm" /> Generating…</> : plan ? '↺ Regenerate' : '✨ Generate plan'}
           </Button>
           {plan && (
-            <Button variant="sky" disabled title="Export PDF coming soon">📄 Export PDF</Button>
+            <Button variant="sky" onClick={exportPDF} disabled={exportLoading}>
+              {exportLoading ? <Spinner size="sm" /> : '📄'} Export PDF
+            </Button>
           )}
         </div>
       </div>

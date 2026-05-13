@@ -16,10 +16,18 @@ export async function POST(req: NextRequest) {
 
     const { projectId, curriculum }: { projectId: string; curriculum: CurriculumOutcome } = await req.json()
 
+    const { data: project } = await supabase
+      .from('bb_projects')
+      .select('id')
+      .eq('id', projectId)
+      .eq('user_id', user.id)
+      .single()
+    if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
     const infographic = await generateInfographic(curriculum, { projectId, userId: user.id })
 
     const imagePrompt = `Educational infographic for Australian Foundation students about "${infographic.title}". ${infographic.layout} layout with sections: ${infographic.sections.map(s => s.label).join(', ')}. Bright cartoon classroom style, warm colours, child-friendly, print-ready A4.`
-    const imageUrl = await generateImage(imagePrompt)
+    const imageUrl = await generateImage(imagePrompt, { projectId, userId: user.id })
 
     const { data: existing } = await supabase
       .from('bb_resources')

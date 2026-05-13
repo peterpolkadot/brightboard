@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { projectId, slideId, curriculum }: { projectId: string; slideId: string; curriculum: CurriculumOutcome } = body
 
-    const { data: slide } = await supabase.from('slides').select('*').eq('id', slideId).single()
+    const { data: slide } = await supabase.from('bb_slides').select('*').eq('id', slideId).single()
     if (!slide) return NextResponse.json({ error: 'Slide not found' }, { status: 404 })
 
     const content = await generateSlideContent(
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const imageUrl = content.imagePrompt ? await generateImage(content.imagePrompt) : null
 
     const { data: updatedSlide } = await supabase
-      .from('slides')
+      .from('bb_slides')
       .update({ content: toJson(content), image_url: imageUrl, status: 'pending' })
       .eq('id', slideId)
       .select()
@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest) {
     const { slideId, status } = await req.json()
 
     const { data: slide } = await supabase
-      .from('slides')
+      .from('bb_slides')
       .update({ status })
       .eq('id', slideId)
       .select()
@@ -59,12 +59,12 @@ export async function PATCH(req: NextRequest) {
 
     if (status === 'approved' && slide) {
       const { data: allSlides } = await supabase
-        .from('slides')
+        .from('bb_slides')
         .select('status')
         .eq('project_id', slide.project_id)
 
       if (allSlides?.every(s => s.status === 'approved')) {
-        await supabase.from('projects').update({ status: 'complete' }).eq('id', slide.project_id)
+        await supabase.from('bb_projects').update({ status: 'complete' }).eq('id', slide.project_id)
       }
     }
 

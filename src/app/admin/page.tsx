@@ -12,10 +12,10 @@ export default async function AdminPage() {
   if (!user || !isAdminEmail(user.email)) redirect('/dashboard')
 
   const [profilesRes, projectsRes, usageRes, settingsRes] = await Promise.all([
-    supabase.from('profiles').select('id, email, full_name, school, created_at').order('created_at', { ascending: false }),
-    supabase.from('projects').select('id, user_id, title, resource_type, subject, status, created_at').order('created_at', { ascending: false }),
-    supabase.from('usage_logs').select('*').order('created_at', { ascending: false }),
-    supabase.from('admin_settings').select('*'),
+    supabase.from('bb_profiles').select('id, email, full_name, school, created_at').order('created_at', { ascending: false }),
+    supabase.from('bb_projects').select('id, user_id, title, resource_type, subject, status, created_at').order('created_at', { ascending: false }),
+    supabase.from('bb_usage_logs').select('*').order('created_at', { ascending: false }),
+    supabase.from('bb_admin_settings').select('*'),
   ])
 
   const settings: Record<string, unknown> = {}

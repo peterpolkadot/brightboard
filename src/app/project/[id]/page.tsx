@@ -17,7 +17,7 @@ export default async function ProjectPage({ params }: Props) {
   if (!user) redirect('/login')
 
   const { data: project } = await supabase
-    .from('projects')
+    .from('bb_projects')
     .select('*')
     .eq('id', id)
     .eq('user_id', user.id)
@@ -26,13 +26,13 @@ export default async function ProjectPage({ params }: Props) {
   if (!project) notFound()
 
   const { data: slides } = await supabase
-    .from('slides')
+    .from('bb_slides')
     .select('*')
     .eq('project_id', id)
     .order('position')
 
   const { data: resources } = await supabase
-    .from('resources')
+    .from('bb_resources')
     .select('*')
     .eq('project_id', id)
 

@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { data } = await supabase.from('admin_settings').select('*')
+  const { data } = await supabase.from('bb_admin_settings').select('*')
   const settings: Record<string, unknown> = {}
   for (const row of data ?? []) {
     settings[row.key] = row.value
@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest) {
   if (!key) return NextResponse.json({ error: 'Missing key' }, { status: 400 })
 
   await supabase
-    .from('admin_settings')
+    .from('bb_admin_settings')
     .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
 
   return NextResponse.json({ ok: true })

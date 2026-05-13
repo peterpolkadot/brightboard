@@ -22,19 +22,19 @@ export async function POST(req: NextRequest) {
     const imageUrl = await generateImage(imagePrompt)
 
     const { data: existing } = await supabase
-      .from('resources')
+      .from('bb_resources')
       .select('id')
       .eq('project_id', projectId)
       .eq('resource_type', 'infographic')
       .single()
 
     if (existing) {
-      await supabase.from('resources').update({ content: toJson(infographic), image_url: imageUrl }).eq('id', existing.id)
+      await supabase.from('bb_resources').update({ content: toJson(infographic), image_url: imageUrl }).eq('id', existing.id)
     } else {
-      await supabase.from('resources').insert({ project_id: projectId, resource_type: 'infographic', content: toJson(infographic), image_url: imageUrl })
+      await supabase.from('bb_resources').insert({ project_id: projectId, resource_type: 'infographic', content: toJson(infographic), image_url: imageUrl })
     }
 
-    await supabase.from('projects').update({ status: 'complete' }).eq('id', projectId)
+    await supabase.from('bb_projects').update({ status: 'complete' }).eq('id', projectId)
 
     return NextResponse.json({ infographic, imageUrl })
   } catch (err) {

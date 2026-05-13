@@ -19,19 +19,19 @@ export async function POST(req: NextRequest) {
     const lessonPlan = await generateLessonPlan(curriculum, { projectId, userId: user.id })
 
     const { data: existing } = await supabase
-      .from('resources')
+      .from('bb_resources')
       .select('id')
       .eq('project_id', projectId)
       .eq('resource_type', 'lesson_plan')
       .single()
 
     if (existing) {
-      await supabase.from('resources').update({ content: toJson(lessonPlan) }).eq('id', existing.id)
+      await supabase.from('bb_resources').update({ content: toJson(lessonPlan) }).eq('id', existing.id)
     } else {
-      await supabase.from('resources').insert({ project_id: projectId, resource_type: 'lesson_plan', content: toJson(lessonPlan) })
+      await supabase.from('bb_resources').insert({ project_id: projectId, resource_type: 'lesson_plan', content: toJson(lessonPlan) })
     }
 
-    await supabase.from('projects').update({ status: 'complete' }).eq('id', projectId)
+    await supabase.from('bb_projects').update({ status: 'complete' }).eq('id', projectId)
 
     return NextResponse.json({ lessonPlan })
   } catch (err) {

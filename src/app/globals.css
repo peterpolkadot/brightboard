@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --font-nunito: 'Nunito', system-ui, sans-serif;
+  --background: #fffbeb;
+  --foreground: #1c1917;
+  --radius: 0.75rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-nunito);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4aa; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a3a380; }
+
+:focus-visible {
+  outline: 2px solid #F79009;
+  outline-offset: 2px;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-float { animation: float 3s ease-in-out infinite; }
+
+.shimmer-bg {
+  background: linear-gradient(90deg, #f5f0dc 25%, #ede8cc 50%, #f5f0dc 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+.slide-preview {
+  aspect-ratio: 16 / 9;
+}
+
+@media print {
+  body { background: white; }
+  .no-print { display: none !important; }
+}

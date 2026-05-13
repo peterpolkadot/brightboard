@@ -3,7 +3,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
-      profiles: {
+      bb_profiles: {
         Row: {
           id: string
           email: string
@@ -30,7 +30,7 @@ export type Database = {
         }
         Relationships: []
       }
-      projects: {
+      bb_projects: {
         Row: {
           id: string
           user_id: string
@@ -78,7 +78,7 @@ export type Database = {
         }
         Relationships: []
       }
-      slides: {
+      bb_slides: {
         Row: {
           id: string
           project_id: string
@@ -117,7 +117,7 @@ export type Database = {
         }
         Relationships: []
       }
-      resources: {
+      bb_resources: {
         Row: {
           id: string
           project_id: string
@@ -150,7 +150,7 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_settings: {
+      bb_admin_settings: {
         Row: {
           key: string
           value: Json
@@ -168,7 +168,7 @@ export type Database = {
         }
         Relationships: []
       }
-      usage_logs: {
+      bb_usage_logs: {
         Row: {
           id: string
           project_id: string | null
@@ -207,7 +207,7 @@ export type Database = {
         }
         Relationships: []
       }
-      folders: {
+      bb_folders: {
         Row: {
           id: string
           user_id: string

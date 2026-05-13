@@ -29,7 +29,7 @@ export function CreateWizard() {
     const title = `${curriculumOutcome.title} — ${resourceType.replace('_', ' ')}`
 
     const { data, error } = await supabase
-      .from('projects')
+      .from('bb_projects')
       .insert({
         user_id: (await supabase.auth.getUser()).data.user!.id,
         title,

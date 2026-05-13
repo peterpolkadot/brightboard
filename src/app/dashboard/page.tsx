@@ -34,7 +34,7 @@ export default async function DashboardPage() {
   if (!user) redirect('/login')
 
   const { data: projects } = await supabase
-    .from('projects')
+    .from('bb_projects')
     .select('*')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })

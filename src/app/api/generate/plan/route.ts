@@ -18,9 +18,9 @@ export async function POST(req: NextRequest) {
 
     const plan = await generateSlidePlan(curriculum, { projectId, userId: user.id })
 
-    await supabase.from('slides').delete().eq('project_id', projectId)
+    await supabase.from('bb_slides').delete().eq('project_id', projectId)
 
-    await supabase.from('slides').insert(
+    await supabase.from('bb_slides').insert(
       plan.map(item => ({
         project_id: projectId,
         position: item.position,
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       }))
     )
 
-    await supabase.from('projects').update({ status: 'generating' }).eq('id', projectId)
+    await supabase.from('bb_projects').update({ status: 'generating' }).eq('id', projectId)
 
     return NextResponse.json({ plan })
   } catch (err) {

@@ -26,7 +26,7 @@ async function getActiveModel(): Promise<string> {
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
     const { data } = await supabase
-      .from('admin_settings')
+      .from('bb_admin_settings')
       .select('value')
       .eq('key', 'active_model')
       .single()
@@ -92,7 +92,7 @@ export async function logUsage(log: UsageLog) {
   try {
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
-    await supabase.from('usage_logs').insert({
+    await supabase.from('bb_usage_logs').insert({
       project_id: log.project_id ?? null,
       user_id: log.user_id ?? null,
       task: log.task,

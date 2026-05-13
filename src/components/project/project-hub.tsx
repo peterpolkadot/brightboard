@@ -60,9 +60,10 @@ const STATUS_BADGE: Record<string, 'warning' | 'info' | 'success'> = {
   complete: 'success',
 }
 
-export function ProjectHub({ project, slides, resources, curriculum }: Props) {
+export function ProjectHub({ project, slides: initialSlides, resources, curriculum }: Props) {
+  const [slides, setSlides] = useState<Slide[]>(initialSlides)
   const [phase, setPhase] = useState<'plan' | 'generate' | 'done'>(
-    slides.length === 0 ? 'plan' : slides.some(s => s.status !== 'approved') ? 'generate' : 'done'
+    initialSlides.length === 0 ? 'plan' : initialSlides.some(s => s.status !== 'approved') ? 'generate' : 'done'
   )
 
   const icon = RESOURCE_ICONS[project.resource_type] ?? '📄'
@@ -110,7 +111,10 @@ export function ProjectHub({ project, slides, resources, curriculum }: Props) {
             <SlidePlanReview
               project={project}
               curriculum={curriculum}
-              onPlanApproved={() => setPhase('generate')}
+              onPlanApproved={(createdSlides) => {
+                setSlides(createdSlides)
+                setPhase('generate')
+              }}
             />
           )}
           {(phase === 'generate' || phase === 'done') && (

@@ -4,15 +4,27 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import type { CurriculumOutcome, SlidePlanItem } from '@/types'
+import type { Json } from '@/types/database'
+
+interface CreatedSlide {
+  id: string
+  position: number
+  title: string
+  slide_type: string
+  content: Json
+  image_url: string | null
+  status: string
+}
 
 interface Props {
   project: { id: string; title: string; subject: string; curriculum_code: string; resource_type: string }
   curriculum?: CurriculumOutcome
-  onPlanApproved: (plan: SlidePlanItem[]) => void
+  onPlanApproved: (slides: CreatedSlide[]) => void
 }
 
 export function SlidePlanReview({ project, curriculum, onPlanApproved }: Props) {
   const [plan, setPlan] = useState<SlidePlanItem[] | null>(null)
+  const [createdSlides, setCreatedSlides] = useState<CreatedSlide[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,6 +47,7 @@ export function SlidePlanReview({ project, curriculum, onPlanApproved }: Props) 
       if (!res.ok) throw new Error('Failed to generate plan')
       const data = await res.json()
       setPlan(data.plan)
+      setCreatedSlides(data.slides ?? [])
     } catch {
       setError('Could not generate slide plan. Please try again.')
     } finally {
@@ -134,7 +147,7 @@ export function SlidePlanReview({ project, curriculum, onPlanApproved }: Props) 
             <p className="text-sm text-stone-500 font-medium">
               {plan.length} slides · Reorder or remove slides before approving
             </p>
-            <Button size="lg" onClick={() => onPlanApproved(plan)}>
+            <Button size="lg" onClick={() => onPlanApproved(createdSlides)}>
               Approve plan → Generate slides
             </Button>
           </div>

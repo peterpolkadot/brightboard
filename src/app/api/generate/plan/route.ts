@@ -33,7 +33,13 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('bb_projects').update({ status: 'generating' }).eq('id', projectId)
 
-    return NextResponse.json({ plan })
+    const { data: slides } = await supabase
+      .from('bb_slides')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('position')
+
+    return NextResponse.json({ plan, slides: slides ?? [] })
   } catch (err) {
     console.error('[generate/plan]', err)
     return NextResponse.json({ error: 'Generation failed' }, { status: 500 })

@@ -58,7 +58,10 @@ export function UsersTab({
   return (
     <div className="bg-white rounded-3xl border border-amber-100 shadow-card p-6">
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-lg font-black text-stone-900">Users</h2>
+        <div>
+          <h2 className="text-lg font-black text-stone-900">Brightboard Users</h2>
+          <p className="text-xs font-semibold text-stone-400">Only users with Brightboard profiles, projects, or usage.</p>
+        </div>
         <Badge variant="secondary">{users.length} total</Badge>
       </div>
       <div className="overflow-x-auto">

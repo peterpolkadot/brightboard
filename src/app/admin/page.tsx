@@ -29,6 +29,21 @@ export default async function AdminPage() {
   for (const row of settingsRes.data ?? []) {
     settings[row.key] = row.value
   }
+  const brightboardUserIds = new Set<string>()
+  for (const profile of profilesRes.data ?? []) brightboardUserIds.add(profile.id)
+  for (const project of projectsRes.data ?? []) brightboardUserIds.add(project.user_id)
+  for (const log of usageRes.data ?? []) {
+    if (log.user_id) brightboardUserIds.add(log.user_id)
+  }
+  const brightboardAuthUsers = authUsersRes?.data?.users
+    ?.filter(authUser => brightboardUserIds.has(authUser.id))
+    .map(authUser => ({
+      id: authUser.id,
+      email: authUser.email ?? '',
+      full_name: typeof authUser.user_metadata?.full_name === 'string' ? authUser.user_metadata.full_name : null,
+      created_at: authUser.created_at,
+      last_sign_in_at: authUser.last_sign_in_at ?? null,
+    })) ?? []
 
   return (
     <div className="min-h-screen bg-amber-50">
@@ -44,13 +59,7 @@ export default async function AdminPage() {
 
         <AdminTabs
           profiles={profilesRes.data ?? []}
-          authUsers={authUsersRes?.data?.users?.map(authUser => ({
-            id: authUser.id,
-            email: authUser.email ?? '',
-            full_name: typeof authUser.user_metadata?.full_name === 'string' ? authUser.user_metadata.full_name : null,
-            created_at: authUser.created_at,
-            last_sign_in_at: authUser.last_sign_in_at ?? null,
-          })) ?? []}
+          authUsers={brightboardAuthUsers}
           projects={projectsRes.data ?? []}
           usageLogs={usageRes.data ?? []}
           settings={settings}

@@ -133,6 +133,29 @@ CREATE TRIGGER resources_updated_at
   BEFORE UPDATE ON resources
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- ─── USAGE LOGS ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS usage_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  task TEXT NOT NULL,
+  model TEXT NOT NULL,
+  prompt_tokens INTEGER NOT NULL DEFAULT 0,
+  completion_tokens INTEGER NOT NULL DEFAULT 0,
+  total_tokens INTEGER NOT NULL DEFAULT 0,
+  cost_usd NUMERIC(12, 8),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE usage_logs ENABLE ROW LEVEL SECURITY;
+
+-- Only admins (service role) can read all logs; users cannot see others' logs
+CREATE POLICY "Users can read own usage logs" ON usage_logs
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Service role full access to usage_logs" ON usage_logs
+  FOR ALL USING (true);
+
 -- ─── STORAGE BUCKETS ─────────────────────────────────────────────────────────
 -- Run these in Supabase Storage settings or via the dashboard:
 -- 1. Create bucket: 'slides' (public)

@@ -14,12 +14,11 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await req.json()
-    const { projectId, curriculum }: { projectId: string; curriculum: CurriculumOutcome } = body
+    const { projectId, curriculum }: { projectId: string; curriculum: CurriculumOutcome } = await req.json()
 
-    const infographic = await generateInfographic(curriculum)
+    const infographic = await generateInfographic(curriculum, { projectId, userId: user.id })
 
-    const imagePrompt = `A beautiful, colourful educational infographic for Australian Foundation students (ages 5-6) about "${infographic.title}". ${infographic.layout} layout. Sections: ${infographic.sections.map(s => s.label).join(', ')}. Bright cartoon classroom style, warm colours, child-friendly illustrations, large readable labels, print-ready A4 format.`
+    const imagePrompt = `Educational infographic for Australian Foundation students about "${infographic.title}". ${infographic.layout} layout with sections: ${infographic.sections.map(s => s.label).join(', ')}. Bright cartoon classroom style, warm colours, child-friendly, print-ready A4.`
     const imageUrl = await generateImage(imagePrompt)
 
     const { data: existing } = await supabase
@@ -30,17 +29,9 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (existing) {
-      await supabase
-        .from('resources')
-        .update({ content: toJson(infographic), image_url: imageUrl })
-        .eq('id', existing.id)
+      await supabase.from('resources').update({ content: toJson(infographic), image_url: imageUrl }).eq('id', existing.id)
     } else {
-      await supabase.from('resources').insert({
-        project_id: projectId,
-        resource_type: 'infographic',
-        content: toJson(infographic),
-        image_url: imageUrl,
-      })
+      await supabase.from('resources').insert({ project_id: projectId, resource_type: 'infographic', content: toJson(infographic), image_url: imageUrl })
     }
 
     await supabase.from('projects').update({ status: 'complete' }).eq('id', projectId)

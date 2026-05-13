@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button'
 
 interface NavProps {
   user?: { email?: string } | null
+  isAdmin?: boolean
 }
 
-export function Nav({ user }: NavProps) {
+export function Nav({ user, isAdmin }: NavProps) {
   const router = useRouter()
 
   async function handleLogout() {
@@ -36,6 +37,11 @@ export function Nav({ user }: NavProps) {
                 <Link href="/dashboard">
                   <Button variant="ghost" size="sm">Dashboard</Button>
                 </Link>
+                {isAdmin && (
+                  <Link href="/admin">
+                    <Button variant="ghost" size="sm">🔒 Admin</Button>
+                  </Link>
+                )}
                 <Link href="/create">
                   <Button size="sm">+ New Resource</Button>
                 </Link>

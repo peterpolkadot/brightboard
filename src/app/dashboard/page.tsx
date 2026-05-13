@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Nav } from '@/components/nav'
+import { isAdminEmail } from '@/lib/admin/auth'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
@@ -39,10 +40,11 @@ export default async function DashboardPage() {
     .order('updated_at', { ascending: false })
 
   const firstName = user.user_metadata?.full_name?.split(' ')[0] ?? 'Teacher'
+  const admin = isAdminEmail(user.email)
 
   return (
     <div className="min-h-screen bg-amber-50">
-      <Nav user={user} />
+      <Nav user={user} isAdmin={admin} />
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}

@@ -16,28 +16,21 @@ export async function POST(req: NextRequest) {
     const curriculum: CurriculumOutcome | undefined = curriculumOverride ?? getCurriculumByCode(curriculumCode)
     if (!curriculum) return NextResponse.json({ error: 'Curriculum outcome not found' }, { status: 400 })
 
-    const plan = await generateSlidePlan(curriculum)
+    const plan = await generateSlidePlan(curriculum, { projectId, userId: user.id })
 
-    // Persist slides to database
-    const { error: deleteErr } = await supabase
-      .from('slides')
-      .delete()
-      .eq('project_id', projectId)
+    await supabase.from('slides').delete().eq('project_id', projectId)
 
-    if (!deleteErr) {
-      await supabase.from('slides').insert(
-        plan.map(item => ({
-          project_id: projectId,
-          position: item.position,
-          title: item.title,
-          slide_type: item.slideType,
-          content: { description: item.description },
-          status: 'pending' as const,
-        }))
-      )
-    }
+    await supabase.from('slides').insert(
+      plan.map(item => ({
+        project_id: projectId,
+        position: item.position,
+        title: item.title,
+        slide_type: item.slideType,
+        content: { description: item.description },
+        status: 'pending' as const,
+      }))
+    )
 
-    // Update project status
     await supabase.from('projects').update({ status: 'generating' }).eq('id', projectId)
 
     return NextResponse.json({ plan })

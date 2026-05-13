@@ -150,6 +150,45 @@ export type Database = {
         }
         Relationships: []
       }
+      usage_logs: {
+        Row: {
+          id: string
+          project_id: string | null
+          user_id: string | null
+          task: string
+          model: string
+          prompt_tokens: number
+          completion_tokens: number
+          total_tokens: number
+          cost_usd: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id?: string | null
+          user_id?: string | null
+          task: string
+          model: string
+          prompt_tokens: number
+          completion_tokens: number
+          total_tokens: number
+          cost_usd?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string | null
+          user_id?: string | null
+          task?: string
+          model?: string
+          prompt_tokens?: number
+          completion_tokens?: number
+          total_tokens?: number
+          cost_usd?: number | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       folders: {
         Row: {
           id: string

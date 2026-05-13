@@ -14,10 +14,9 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await req.json()
-    const { projectId, curriculum }: { projectId: string; curriculum: CurriculumOutcome } = body
+    const { projectId, curriculum }: { projectId: string; curriculum: CurriculumOutcome } = await req.json()
 
-    const lessonPlan = await generateLessonPlan(curriculum)
+    const lessonPlan = await generateLessonPlan(curriculum, { projectId, userId: user.id })
 
     const { data: existing } = await supabase
       .from('resources')
@@ -27,16 +26,9 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (existing) {
-      await supabase
-        .from('resources')
-        .update({ content: toJson(lessonPlan) })
-        .eq('id', existing.id)
+      await supabase.from('resources').update({ content: toJson(lessonPlan) }).eq('id', existing.id)
     } else {
-      await supabase.from('resources').insert({
-        project_id: projectId,
-        resource_type: 'lesson_plan',
-        content: toJson(lessonPlan),
-      })
+      await supabase.from('resources').insert({ project_id: projectId, resource_type: 'lesson_plan', content: toJson(lessonPlan) })
     }
 
     await supabase.from('projects').update({ status: 'complete' }).eq('id', projectId)

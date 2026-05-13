@@ -17,35 +17,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { projectId, slideId, curriculum }: { projectId: string; slideId: string; curriculum: CurriculumOutcome } = body
 
-    // Fetch slide
-    const { data: slide } = await supabase
-      .from('slides')
-      .select('*')
-      .eq('id', slideId)
-      .single()
-
+    const { data: slide } = await supabase.from('slides').select('*').eq('id', slideId).single()
     if (!slide) return NextResponse.json({ error: 'Slide not found' }, { status: 404 })
 
-    // Generate content
     const content = await generateSlideContent(
       { title: slide.title, slide_type: slide.slide_type },
-      curriculum
+      curriculum,
+      { projectId, userId: user.id }
     )
 
-    // Optionally generate image
-    let imageUrl: string | null = null
-    if (content.imagePrompt) {
-      imageUrl = await generateImage(content.imagePrompt)
-    }
+    const imageUrl = content.imagePrompt ? await generateImage(content.imagePrompt) : null
 
-    // Update slide in database
     const { data: updatedSlide } = await supabase
       .from('slides')
-      .update({
-        content: toJson(content),
-        image_url: imageUrl,
-        status: 'pending',
-      })
+      .update({ content: toJson(content), image_url: imageUrl, status: 'pending' })
       .eq('id', slideId)
       .select()
       .single()
@@ -72,7 +57,6 @@ export async function PATCH(req: NextRequest) {
       .select()
       .single()
 
-    // Check if all slides are approved; if so, mark project complete
     if (status === 'approved' && slide) {
       const { data: allSlides } = await supabase
         .from('slides')
@@ -80,10 +64,7 @@ export async function PATCH(req: NextRequest) {
         .eq('project_id', slide.project_id)
 
       if (allSlides?.every(s => s.status === 'approved')) {
-        await supabase
-          .from('projects')
-          .update({ status: 'complete' })
-          .eq('id', slide.project_id)
+        await supabase.from('projects').update({ status: 'complete' }).eq('id', slide.project_id)
       }
     }
 
